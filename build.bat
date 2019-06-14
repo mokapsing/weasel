@@ -2,9 +2,14 @@
 
 setlocal
 
+set WEASEL_VERSION=0.14.0
+if not defined WEASEL_BUILD set WEASEL_BUILD=0
+if not defined WEASEL_ROOT set WEASEL_ROOT=%CD%
+
 if exist env.bat call env.bat
 
-if not defined WEASEL_ROOT set WEASEL_ROOT=%CD%
+echo WEASEL_VERSION=%WEASEL_VERSION%
+echo WEASEL_BUILD=%WEASEL_BUILD%
 echo WEASEL_ROOT=%WEASEL_ROOT%
 echo.
 
@@ -19,11 +24,11 @@ echo.
 
 if not defined BJAM_TOOLSET (
   rem the number actually means platform toolset, not %VisualStudioVersion%
-  set BJAM_TOOLSET=msvc-14.0
+  set BJAM_TOOLSET=msvc-14.1
 )
 
 if not defined PLATFORM_TOOLSET (
-  set PLATFORM_TOOLSET=v140_xp
+  set PLATFORM_TOOLSET=v141_xp
 )
 
 if defined DEVTOOLS_PATH set PATH=%DEVTOOLS_PATH%%PATH%
@@ -33,6 +38,7 @@ set build_option=/t:Build
 set build_boost=0
 set build_boost_variant=release
 set build_data=0
+set build_opencc=0
 set build_hant=0
 set build_rime=0
 set build_installer=0
@@ -51,6 +57,7 @@ if "%1" == "release" (
 if "%1" == "rebuild" set build_option=/t:Rebuild
 if "%1" == "boost" set build_boost=1
 if "%1" == "data" set build_data=1
+if "%1" == "opencc" set build_opencc=1
 if "%1" == "hant" set build_hant=1
 if "%1" == "rime" set build_rime=1
 if "%1" == "librime" set build_rime=1
@@ -58,6 +65,7 @@ if "%1" == "installer" set build_installer=1
 if "%1" == "all" (
   set build_boost=1
   set build_data=1
+  set build_opencc=1
   set build_hant=1
   set build_rime=1
   set build_installer=1
@@ -90,11 +98,12 @@ if %build_rime% == 1 (
   copy /Y librime\build\lib\Release\rime.dll output\
 )
 
-if %build_data% == 1 (
-  call :build_data
-) else if not exist output\data\essay.txt (
-  call :build_data
-)
+
+if not exist output\data\essay.txt set build_data=1
+if %build_data% == 1 call :build_data
+
+if not exist output\data\opencc\TSCharacters.ocd set build_opencc=1
+if %build_opencc% == 1 call :build_opencc_data
 
 cd /d %WEASEL_ROOT%
 
@@ -123,7 +132,10 @@ msbuild.exe weasel.sln %build_option% /p:Configuration=%build_config% /p:Platfor
 if errorlevel 1 goto error
 
 if %build_installer% == 1 (
-  "%ProgramFiles(x86)%"\NSIS\Bin\makensis.exe output\install.nsi
+  "%ProgramFiles(x86)%"\NSIS\Bin\makensis.exe ^
+  /DWEASEL_VERSION=%WEASEL_VERSION% ^
+  /DWEASEL_BUILD=%WEASEL_BUILD% ^
+  output\install.nsi
   if errorlevel 1 goto error
 )
 
@@ -173,7 +185,6 @@ copy %WEASEL_ROOT%\plum\rime-install.bat output\
 set plum_dir=plum
 set rime_dir=output/data
 bash plum/rime-install
-call :build_opencc_data
 exit /b
 
 :build_essay
@@ -186,13 +197,13 @@ cd %WEASEL_ROOT%
 exit /b
 
 :build_opencc_data
-if not exist %WEASEL_ROOT%\librime\thirdparty\data\opencc\TSCharacters.ocd (
+if not exist %WEASEL_ROOT%\librime\thirdparty\share\opencc\TSCharacters.ocd (
   cd %WEASEL_ROOT%\librime
   call build.bat thirdparty
 )
 cd %WEASEL_ROOT%
 if not exist output\data\opencc mkdir output\data\opencc
-copy %WEASEL_ROOT%\librime\thirdparty\data\opencc\*.* output\data\opencc\
+copy %WEASEL_ROOT%\librime\thirdparty\share\opencc\*.* output\data\opencc\
 exit /b
 
 :error

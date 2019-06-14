@@ -77,13 +77,23 @@ update_pub_date() {
     rm "${file}~"
 }
 
+update_changelog() {
+    local version="$1"
+    clog --from-latest-tag \
+         --changelog CHANGELOG.md \
+         --repository https://github.com/rime/weasel \
+         --setversion "${version}"
+}
+
 edit_rc_file WeaselServer/WeaselServer.rc
 
 edit_source_file include/WeaselVersion.h
-edit_source_file output/install.nsi
+edit_source_file build.bat
 edit_source_file appveyor.yml
 
 edit_source_file update/testing-appcast.xml
 edit_source_file update/appcast.xml
 update_pub_date update/testing-appcast.xml
 update_pub_date update/appcast.xml
+
+update_changelog "${new_major}.${new_minor}.${new_patch}"

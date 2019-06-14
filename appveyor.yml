@@ -1,4 +1,4 @@
-skip_tags: true
+skip_tags: false
 clone_depth: 1
 pull_requests:
   do_not_increment_build_number: true
@@ -7,13 +7,14 @@ version: '{branch} build {build}'
 image: Visual Studio 2017
 
 environment:
-  BOOST_ROOT: C:\Libraries\libboost
+  BOOST_ROOT: C:\Libraries\boost_1_69_0
   CMAKE_GENERATOR: "Visual Studio 15 2017"
   PLATFORM_TOOLSET: v141_xp
 
 cache:
   - boost.cached -> appveyor.install.bat
-  - C:\Libraries\libboost -> appveyor.install.bat
+  - C:\Libraries\boost_1_69_0\stage -> appveyor.install.bat
+  - C:\Libraries\boost_1_69_0\stage_x64 -> appveyor.install.bat
 
 init:
   - git --version
@@ -23,8 +24,35 @@ install:
   - .\appveyor.install.bat
 
 build_script:
+  - set WEASEL_BUILD=%APPVEYOR_BUILD_NUMBER%
   - .\build.bat data hant installer
 
 artifacts:
-  - path: output\archives\weasel-0.13.0.0-installer.exe
+  - path: output\archives\weasel-0.14.0.$(appveyor_build_number)-installer.exe
     name: Weasel
+
+deploy:
+  - provider: BinTray
+    username: $(bintray_user)
+    api_key: $(bintray_api_key)
+    subject: rime
+    repo: weasel
+    package: release
+    version: 0.14.0
+    publish: false
+    override: false
+    explode: false
+    on:
+      APPVEYOR_REPO_TAG: true
+  - provider: BinTray
+    username: $(bintray_user)
+    api_key: $(bintray_api_key)
+    subject: rime
+    repo: weasel
+    package: testing
+    version: 0.14.0.$(appveyor_build_number)
+    publish: true
+    override: false
+    explode: false
+    on:
+      branch: master
